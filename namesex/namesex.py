@@ -155,15 +155,13 @@ class namesex:
 
         logreg = linear_model.LogisticRegression(C=c2)
         x_array = self.gen_feat_array(namevec)
-        print(x_array)
-        print(x_array.shape)
-        print(self.feat_dict)
         logreg.fit(x_array, y_train)
         #self.lrmodel = logreg
         self.lrmodelcoef = np.transpose(logreg.coef_)
         self.lrmodelintcp = logreg.intercept_
 
         x2_train = self.gen_feat_array_w2v(namevec)
+        self.rfmodel.fit(x2_train, y_train)
 
 
 if __name__ == "__main__":
