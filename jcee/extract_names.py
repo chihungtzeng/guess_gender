@@ -6,6 +6,7 @@ Convert *.txt from big5 to utf8.
 import argparse
 import io
 import re
+from check_cjk_range import is_standard_chinese_name
 __PAT = u"[\\d]{6,}\\s*(?P<name>[^\\d]+)"
 __RGX = re.compile(__PAT)
 
@@ -16,7 +17,8 @@ def __extract_names(src_file):
     for line in lines:
         for name in __RGX.findall(line):
             name = name.replace(u" ", u"").replace("(", "").replace(")", "")
-            print(name)
+            if is_standard_chinese_name(name):
+                print(name)
 
 
 def main():

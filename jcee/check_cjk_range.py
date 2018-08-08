@@ -17,15 +17,20 @@ def is_within_cjk_range(ucode):
     return False
 
 
+def is_standard_chinese_name(name):
+    for char in name:
+        ucode = ord(char)
+        if not is_within_cjk_range(ucode):
+            return False
+    return True
+
+
 def main():
     with io.open("all_names.txt", encoding="utf-8") as _fp:
         contents = _fp.read()
     for line in contents.splitlines():
-        for char in line:
-            ucode = ord(char)
-            if not is_within_cjk_range(ucode):
-                print(char)
-
+        if not is_standard_chinese_name(line):
+            print(line)
 
 
 if __name__ == "__main__":
