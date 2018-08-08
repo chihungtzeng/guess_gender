@@ -8,16 +8,16 @@ Use python2.7 to avoid encoding problems.
 """
 import io
 import os
+import re
 import logging
-import subprocess
-import sys
 
 
 def __get_src_file_names():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     ret = []
+    rgx = re.compile("\\d+(\\-\\d)?\\.txt")
     for fname in os.listdir(cur_dir):
-        if fname.endswith(".txt") and "utf8" not in fname:
+        if rgx.match(fname):
             fullpath = os.path.join(cur_dir, fname)
             ret.append(fullpath)
     return ret
