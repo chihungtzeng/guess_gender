@@ -15,7 +15,7 @@ def __extract_names(src_file):
         lines = _fp.read().splitlines()
     for line in lines:
         for name in __RGX.findall(line):
-            name = name.replace(u" ", u"")
+            name = name.replace(u" ", u"").replace("(", "").replace(")", "")
             print(name)
 
 
