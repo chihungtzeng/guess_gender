@@ -25,8 +25,9 @@ def __read_data():
 
 
 def __predict(rfmodel):
-    names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨"]
+    names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"王建民", u"莎拉波娃", u"華彥"]
     for name in names:
+        print(name)
         x = np.array([ord(_) for _ in name], np.int32)
         x = x.reshape(-1, 1)
         prob = rfmodel.predict_proba(x)
