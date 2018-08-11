@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+from functools import lru_cache
 
 CJK_UNICODE_RANGES = [
     (0x3400, 0x4DBF),
@@ -11,7 +13,7 @@ CJK_UNICODE_RANGES = [
     (0x2F800, 0x2FA1F)]
 
 
-def char_to_feature_index(char):
+def _char_to_feature_index(char):
     """
     CJK unicode range is sparse. It is inefficient if we use the code of
     |char| as the index of a feature. Hence, we map |char| to a more dense
@@ -30,9 +32,18 @@ def char_to_feature_index(char):
     return -1
 
 
+@lru_cache(maxsize=None)
+def _num_features():
+    return sum([end - start + 1 for (start, end) in CJK_UNICODE_RANGES])
+
+
 def calc_feature_by_name(name):
     """
     Args:
     name -- A unicode string.
     """
-    return None
+    base = np.zeros(_num_features())
+    for char in name:
+        index = _char_to_feature_index(char)
+        base[index] = 1
+    return base
