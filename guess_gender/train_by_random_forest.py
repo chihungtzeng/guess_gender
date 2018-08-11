@@ -24,16 +24,20 @@ def __read_data():
     return name_features, genders
 
 
-def __predict(rfmodel, names=None):
+def __predict(rfmodel, names, show_proba):
     if not names:
         names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
                  u"莎拉波娃", u"青", u"去病"]
     for name in names:
         _x = calc_feature_by_name(name)
         _x = _x.reshape(1, -1)
-        prob = rfmodel.predict(_x)
-        gender = u"男" if prob > 0 else u"女"
-        print(u"{} {}".format(name, gender))
+        proba = rfmodel.predict_proba(_x)[0]
+
+        gender = u"男" if proba[1] > 0.5 else u"女"
+        if show_proba:
+            print(u"{} {} {}".format(name, gender, proba))
+        else:
+            print(u"{} {}".format(name, gender))
 
 
 def __get_rfmodel_file():
@@ -86,11 +90,12 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--from-scratch", action="store_true")
+    parser.add_argument("--show-proba", action="store_true")
     parser.add_argument("--names-to-predict", "-n", nargs="+", default=None)
     args = parser.parse_args()
 
     rfmodel = __get_rfmodel(args.from_scratch)
-    __predict(rfmodel, args.names_to_predict)
+    __predict(rfmodel, args.names_to_predict, args.show_proba)
     elapsed = time.time() - start_time
     logging.info(u"Total time: %dm%s", elapsed // 60, elapsed % 60)
 
