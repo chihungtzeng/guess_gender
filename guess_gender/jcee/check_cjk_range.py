@@ -63,6 +63,5 @@ def main():
     __list_chars_not_in_chinese_names(lines)
 
 
-
 if __name__ == "__main__":
     main()
