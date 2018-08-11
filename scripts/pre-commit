@@ -1,0 +1,9 @@
+#!/bin/bash
+set -x
+set -e
+readonly repo_dir=$(readlink -e .)
+readonly repo_name=$(basename ${repo_dir})
+readonly scripts_dir=${repo_dir}/scripts
+
+# Coding style check
+python ${scripts_dir}/py_check.py
