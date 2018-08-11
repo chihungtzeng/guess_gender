@@ -8,30 +8,32 @@ import time
 import pickle
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from calc_feature import calc_feature_by_name
+
 
 def __read_data():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     dfile = os.path.join(cur_dir, "data", "gender.txt")
-    names = []
+    name_features = []
     genders = []
     with open(dfile, newline="") as _fp:
         rows = csv.reader(_fp)
         for name, gender in rows:
-            igender = int(gender)
-            for char in name:
-                names.append(ord(char))
-                genders.append(igender)
-    return names, genders
+            genders.append(int(gender))
+            name_features.append(calc_feature_by_name(name))
+    return name_features, genders
 
 
-def __predict(rfmodel):
-    names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"王建民", u"莎拉波娃", u"華彥"]
+def __predict(rfmodel, names=None):
+    if not names:
+        names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
+                 u"莎拉波娃", u"青", u"去病"]
     for name in names:
-        print(name)
-        x = np.array([ord(_) for _ in name], np.int32)
-        x = x.reshape(-1, 1)
-        prob = rfmodel.predict_proba(x)
-        print(prob)
+        _x = calc_feature_by_name(name)
+        _x = _x.reshape(1, -1)
+        prob = rfmodel.predict(_x)
+        gender = u"男" if prob > 0 else u"女"
+        print(u"{} {}".format(name, gender))
 
 
 def __get_rfmodel_file():
@@ -48,6 +50,7 @@ def __load_rfmodel():
         rfmodel = pickle.load(_fp)
     return rfmodel
 
+
 def __save_rfmodel(rfmodel):
     fpath = __get_rfmodel_file()
     logging.warning("Dump to %s", fpath)
@@ -59,35 +62,35 @@ def __save_rfmodel(rfmodel):
         pickle.dump(rfmodel, _fp, pickle.HIGHEST_PROTOCOL)
 
 
-def __get_rfmodel(force):
-    if not force:
+def __get_rfmodel(from_scratch):
+    if not from_scratch:
         rfmodel = __load_rfmodel()
         if rfmodel:
             return rfmodel
     # Train model
-    names, genders = __read_data()
-    rfmodel = RandomForestClassifier(n_estimators=500, n_jobs=4)
+    name_features, genders = __read_data()
+    rfmodel = RandomForestClassifier(n_estimators=64, n_jobs=4)
     logging.info("Train random forest")
-    x = np.array(names, np.int32)
-    y = np.array(genders, np.int32)
-    x = x.reshape(-1, 1)
-    print(x)
-    print(x.shape)
-    print(y.shape)
-    rfmodel.fit(x, y)
+    train_x = np.array([_f for _f in name_features])
+    train_y = np.array(genders, np.int32)
+    logging.debug(train_x.shape)
+    logging.debug(train_y.shape)
+    rfmodel.fit(train_x, train_y)
     __save_rfmodel(rfmodel)
     return rfmodel
 
 
 def main():
+    """Prog entry."""
     start_time = time.time()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--from-scratch", action="store_true")
+    parser.add_argument("--names-to-predict", "-n", nargs="+", default=None)
     args = parser.parse_args()
 
-    rfmodel = __get_rfmodel(args.force)
-    __predict(rfmodel)
+    rfmodel = __get_rfmodel(args.from_scratch)
+    __predict(rfmodel, args.names_to_predict)
     elapsed = time.time() - start_time
     logging.info(u"Total time: %dm%s", elapsed // 60, elapsed % 60)
 
