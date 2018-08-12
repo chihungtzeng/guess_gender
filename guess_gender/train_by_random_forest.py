@@ -11,17 +11,17 @@ from sklearn.ensemble import RandomForestClassifier
 from calc_feature import calc_feature_by_name
 
 
-def _read_data():
+def _read_data(csv_file):
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    dfile = os.path.join(cur_dir, "data", "gender.txt")
-    name_features = []
+    dfile = os.path.join(cur_dir, "data", csv_file)
+    names = []
     genders = []
     with open(dfile, newline="") as _fp:
         rows = csv.reader(_fp)
         for name, gender in rows:
             genders.append(int(gender))
-            name_features.append(calc_feature_by_name(name))
-    return name_features, genders
+            names.append(name)
+    return names, genders
 
 
 def _get_rfmodel_file():
@@ -37,19 +37,23 @@ class RFModel(object):
         self.rfmodel = None
         self.ineffective_features = None
 
-    def predict(self, names, show_proba):
+    def predict(self, names):
         if not names:
             names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
                      u"莎拉波娃", u"青", u"去病"]
         test_x = np.array([calc_feature_by_name(_) for _ in names])
         test_x = self.rm_ineffective_features(test_x)
-        proba = self.rfmodel.predict_proba(test_x)
-        for index, name in enumerate(names):
-            gender = u"男" if proba[index][1] > 0.5 else u"女"
-            if show_proba:
-                print(u"{} {} {}".format(name, gender, proba[index][1]))
-            else:
-                print(u"{} {}".format(name, gender))
+        predict_result = self.rfmodel.predict(test_x)
+        return predict_result
+
+    def predict_proba(self, names):
+        if not names:
+            names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
+                     u"莎拉波娃", u"青", u"去病"]
+        test_x = np.array([calc_feature_by_name(_) for _ in names])
+        test_x = self.rm_ineffective_features(test_x)
+        predict_result = self.rfmodel.predict_proba(test_x)
+        return predict_result
 
     def calc_ineffective_features(self, ndarray):
         """
@@ -69,11 +73,13 @@ class RFModel(object):
         return np.delete(ndarray, self.ineffective_features, axis=1)
 
     def train(self):
-        name_features, genders = _read_data()
+        names, genders = _read_data("gender.csv")
+
+        name_features = [calc_feature_by_name(_) for _ in names]
         self.rfmodel = RandomForestClassifier(n_estimators=64, n_jobs=4)
 
         logging.info("Feature selection")
-        train_x = np.array([_f for _f in name_features])
+        train_x = np.array(name_features)
         self.calc_ineffective_features(train_x)
         train_x = self.rm_ineffective_features(train_x)
         logging.info(train_x.shape)
@@ -103,7 +109,25 @@ def __load_rfmodel():
         logging.warning("Load from %s", fpath)
         with io.open(fpath, "rb") as _fp:
             rfmodel = pickle.load(_fp)
+    else:
+        rfmodel = RFModel()
+        rfmodel.train()
     return rfmodel
+
+
+def __validate(rfmodel):
+    names, genders = _read_data("testdata.csv")
+    result = rfmodel.predict(names)
+    correct = 0
+    for index, name in enumerate(names):
+        expect = genders[index]
+        actual = result[index]
+        if expect != actual:
+            logging.info("%s: Expect: %d, actual: %d", name, expect, actual)
+        else:
+            correct += 1
+    accuracy = correct / len(names)
+    logging.info("Accuracy: %d/%d = %f", correct, len(names), accuracy)
 
 
 def main():
@@ -121,7 +145,14 @@ def main():
         rfmodel.train()
     else:
         rfmodel = __load_rfmodel()
-    rfmodel.predict(args.names_to_predict, args.show_proba)
+
+    if args.show_proba:
+        rfmodel.predict_proba(args.names_to_predict)
+    else:
+        rfmodel.predict(args.names_to_predict)
+
+    __validate(rfmodel)
+
     elapsed = time.time() - start_time
     logging.info(u"Total time: %dm%s", elapsed // 60, elapsed % 60)
 
