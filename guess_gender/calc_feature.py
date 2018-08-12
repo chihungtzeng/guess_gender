@@ -45,5 +45,6 @@ def calc_feature_by_name(name):
     base = np.zeros(_num_features())
     for char in name:
         index = _char_to_feature_index(char)
-        base[index] = 1
+        if index >= 0:
+            base[index] = 1
     return base
