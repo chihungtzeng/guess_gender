@@ -3,7 +3,7 @@ import argparse
 import os
 import csv
 import logging
-from .calc_feature import CJK_UNICODE_RANGES
+from guess_gender import calc_feature
 
 
 def _read_data(csv_file):
@@ -20,7 +20,7 @@ def _read_data(csv_file):
 
 def _within_cjk_unicode_range(char):
     code = ord(char)
-    for start, end in CJK_UNICODE_RANGES:
+    for start, end in calc_feature.CJK_UNICODE_RANGES:
         if code >= start and code <= end:
             return True
     return False
