@@ -147,11 +147,13 @@ def main():
         rfmodel = __load_rfmodel()
 
     if args.show_proba:
-        rfmodel.predict_proba(args.names_to_predict)
+        result = rfmodel.predict_proba(args.names_to_predict)
     else:
-        rfmodel.predict(args.names_to_predict)
+        result = rfmodel.predict(args.names_to_predict)
+    for index, name in enumerate(args.names_to_predict):
+        print(u"{}: {}".format(name, result[index]))
 
-    __validate(rfmodel)
+    # __validate(rfmodel)
 
     elapsed = time.time() - start_time
     logging.info(u"Total time: %dm%s", elapsed // 60, elapsed % 60)
