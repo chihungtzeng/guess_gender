@@ -35,13 +35,15 @@ class RFModel(object):
     """
     def __init__(self):
         self.rfmodel = None
+        self.ineffective_features = None
 
     def predict(self, names, show_proba):
         if not names:
             names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
                      u"莎拉波娃", u"青", u"去病"]
         test_x = np.array([calc_feature_by_name(_) for _ in names])
-        proba = proba = self.rfmodel.predict_proba(test_x)
+        test_x = self.rm_ineffective_features(test_x)
+        proba = self.rfmodel.predict_proba(test_x)
         for index, name in enumerate(names):
             gender = u"男" if proba[index][1] > 0.5 else u"女"
             if show_proba:
@@ -49,14 +51,38 @@ class RFModel(object):
             else:
                 print(u"{} {}".format(name, gender))
 
+    def calc_ineffective_features(self, ndarray):
+        """
+        Return the column index in which the sum of column values is > 0.
+
+        Args:
+        ndarray -- A 2d array.
+        """
+        column_sums = list(np.sum(ndarray, axis=0))
+        self.ineffective_features = [
+            idx for idx, value in enumerate(column_sums) if value == 0]
+
+    def rm_ineffective_features(self, ndarray):
+        """
+        Extract effective columns from |ndarray|.
+        """
+        return np.delete(ndarray, self.ineffective_features, axis=1)
+
     def train(self):
         name_features, genders = _read_data()
         self.rfmodel = RandomForestClassifier(n_estimators=64, n_jobs=4)
-        logging.info("Train random forest")
+
+        logging.info("Feature selection")
         train_x = np.array([_f for _f in name_features])
+        self.calc_ineffective_features(train_x)
+        train_x = self.rm_ineffective_features(train_x)
+        logging.info(train_x.shape)
+
         train_y = np.array(genders, np.int32)
-        logging.debug(train_x.shape)
+
         logging.debug(train_y.shape)
+
+        logging.info("Train random forest")
         self.rfmodel.fit(train_x, train_y)
         self.__save()
 
