@@ -8,7 +8,8 @@ import time
 import pickle
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from calc_feature import calc_feature_by_name
+from calc_feature import (
+    calc_feature_by_name, CJK_UNICODE_RANGES, _char_to_feature_index)
 
 
 def _read_data(csv_file):
@@ -92,6 +93,22 @@ class RFModel(object):
         self.rfmodel.fit(train_x, train_y)
         self.__save()
 
+    def feature_importances(self):
+        importances = self.rfmodel.feature_importances_
+        idx = 0
+        char_importance = []
+        for start, end in CJK_UNICODE_RANGES:
+            for code in range(start, end+1):
+                char = chr(code)
+                cidx = _char_to_feature_index(char)
+                if cidx not in self.ineffective_features:
+                    importance = importances[idx]
+                    char_importance.append((char, importance))
+                    idx += 1
+        char_importance.sort(key=lambda x: x[1])
+        for char, importance in char_importance:
+            print(u"{} {}".format(char, importance))
+
     def __save(self):
         fpath = _get_rfmodel_file()
         logging.warning("Save model to %s", fpath)
@@ -137,7 +154,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--from-scratch", action="store_true")
     parser.add_argument("--show-proba", action="store_true")
-    parser.add_argument("--names-to-predict", "-n", nargs="+", default=None)
+    parser.add_argument("--names-to-predict", "-n", nargs="+", default=[])
     args = parser.parse_args()
 
     if args.from_scratch:
@@ -153,7 +170,9 @@ def main():
     for index, name in enumerate(args.names_to_predict):
         print(u"{}: {}".format(name, result[index]))
 
+    # dump internal data:
     # __validate(rfmodel)
+    # rfmodel.feature_importances()
 
     elapsed = time.time() - start_time
     logging.info(u"Total time: %dm%s", elapsed // 60, elapsed % 60)
