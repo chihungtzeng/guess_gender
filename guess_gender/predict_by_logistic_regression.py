@@ -2,14 +2,13 @@
 import argparse
 import os
 import csv
-import io
 import logging
 import time
-import pickle
 import numpy as np
 from sklearn import linear_model
 from calc_feature import (
     calc_feature_by_name, CJK_UNICODE_RANGES, _char_to_feature_index)
+from guess_gender.base_model import BaseModel
 
 
 def _read_data(csv_file):
@@ -30,31 +29,13 @@ def _get_lrmodel_file():
     return os.path.join(cur_dir, "model", "lrmodel.pkl")
 
 
-class LRModel(object):
+class LRModel(BaseModel):
     """
     Wrapper of Logistic Regression model.
     """
     def __init__(self):
-        self.lrmodel = None
+        super().__init__()
         self.ineffective_features = None
-
-    def predict(self, names):
-        if not names:
-            names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
-                     u"莎拉波娃", u"青", u"去病"]
-        test_x = np.array([calc_feature_by_name(_) for _ in names])
-        test_x = self.rm_ineffective_features(test_x)
-        predict_result = self.lrmodel.predict(test_x)
-        return predict_result
-
-    def predict_proba(self, names):
-        if not names:
-            names = [u"承憲", u"均平", u"建安", u"美雲", u"乃馨", u"建民",
-                     u"莎拉波娃", u"青", u"去病"]
-        test_x = np.array([calc_feature_by_name(_) for _ in names])
-        test_x = self.rm_ineffective_features(test_x)
-        predict_result = self.lrmodel.predict_proba(test_x)
-        return predict_result
 
     def calc_ineffective_features(self, ndarray):
         """
@@ -73,31 +54,29 @@ class LRModel(object):
         """
         return np.delete(ndarray, self.ineffective_features, axis=1)
 
-    def train(self):
+    def transform_raw_x(self, raw_x):
         """
-        Train model.
+        Args:
+        raw_x -- A list of names.
         """
-        names, genders = _read_data("gender.csv")
-
-        name_features = [calc_feature_by_name(_) for _ in names]
-        self.lrmodel = linear_model.LogisticRegression()
-
-        logging.info("Feature selection")
+        name_features = [calc_feature_by_name(_) for _ in raw_x]
         train_x = np.array(name_features)
-        self.calc_ineffective_features(train_x)
-        train_x = self.rm_ineffective_features(train_x)
-        logging.info(train_x.shape)
+        if self.ineffective_features is None:
+            self.calc_ineffective_features(train_x)
+        return self.rm_ineffective_features(train_x)
 
-        train_y = np.array(genders, np.int32)
+    def transform_raw_y(self, raw_y):
+        """
+        Args:
+        raw_y -- A list of genders, where a gender is 0(female) or 1 (male).
+        """
+        return np.array(raw_y, np.int32)
 
-        logging.debug(train_y.shape)
-
-        logging.info("Train random forest")
-        self.lrmodel.fit(train_x, train_y)
-        self.__save()
+    def _init_model(self):
+        return linear_model.LogisticRegression()
 
     def feature_importances(self):
-        importances = self.lrmodel.coef_
+        importances = self.model.coef_
         idx = 0
         char_importance = []
         for start, end in CJK_UNICODE_RANGES:
@@ -111,28 +90,6 @@ class LRModel(object):
         char_importance.sort(key=lambda x: x[1])
         for char, importance in char_importance:
             print(u"{} {}".format(char, importance))
-
-    def __save(self):
-        fpath = _get_lrmodel_file()
-        logging.warning("Save model to %s", fpath)
-        _dir = os.path.dirname(fpath)
-        if not os.path.isdir(_dir):
-            os.makedirs(_dir)
-
-        with io.open(fpath, "wb") as _fp:
-            pickle.dump(self, _fp, pickle.HIGHEST_PROTOCOL)
-
-
-def __load_lrmodel():
-    fpath = _get_lrmodel_file()
-    if os.path.isfile(fpath):
-        logging.warning("Load from %s", fpath)
-        with io.open(fpath, "rb") as _fp:
-            lrmodel = pickle.load(_fp)
-    else:
-        lrmodel = LRModel()
-        lrmodel.train()
-    return lrmodel
 
 
 def __validate(lrmodel):
@@ -160,11 +117,15 @@ def main():
     parser.add_argument("--names-to-predict", "-n", nargs="+", default=[])
     args = parser.parse_args()
 
-    if args.from_scratch:
-        lrmodel = LRModel()
-        lrmodel.train()
+    fpath = _get_lrmodel_file()
+    lrmodel = LRModel()
+
+    if args.from_scratch or not os.path.isfile(fpath):
+        names, genders = _read_data("gender.csv")
+        lrmodel.train(names, genders)
+        lrmodel.save(fpath)
     else:
-        lrmodel = __load_lrmodel()
+        lrmodel = BaseModel.load(fpath)
 
     if args.show_proba:
         result = lrmodel.predict_proba(args.names_to_predict)
