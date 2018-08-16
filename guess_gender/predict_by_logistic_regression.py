@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
-import csv
 import logging
 import time
 import numpy as np
@@ -9,19 +8,7 @@ from sklearn import linear_model
 from calc_feature import (
     calc_feature_by_name, CJK_UNICODE_RANGES, _char_to_feature_index)
 from guess_gender.base_model import BaseModel
-
-
-def _read_data(csv_file):
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    dfile = os.path.join(cur_dir, "data", csv_file)
-    names = []
-    genders = []
-    with open(dfile, newline="") as _fp:
-        rows = csv.reader(_fp)
-        for name, gender in rows:
-            genders.append(int(gender))
-            names.append(name)
-    return names, genders
+from guess_gender.predict_by_random_forest import read_name_gender_from_csv
 
 
 def _get_lrmodel_file():
@@ -93,7 +80,7 @@ class LRModel(BaseModel):
 
 
 def __validate(lrmodel):
-    names, genders = _read_data("testdata.csv")
+    names, genders = read_name_gender_from_csv("testdata.csv")
     result = lrmodel.predict(names)
     correct = 0
     for index, name in enumerate(names):
@@ -121,7 +108,7 @@ def main():
     lrmodel = LRModel()
 
     if args.from_scratch or not os.path.isfile(fpath):
-        names, genders = _read_data("gender.csv")
+        names, genders = read_name_gender_from_csv("gender.csv")
         lrmodel.train(names, genders)
         lrmodel.save(fpath)
     else:

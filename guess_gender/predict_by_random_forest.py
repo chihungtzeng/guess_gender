@@ -11,7 +11,7 @@ from calc_feature import (
 from guess_gender.base_model import BaseModel
 
 
-def _read_data(csv_file):
+def read_name_gender_from_csv(csv_file):
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     dfile = os.path.join(cur_dir, "data", csv_file)
     names = []
@@ -30,7 +30,7 @@ def _get_rfmodel_file():
 
 
 def __validate(rfmodel):
-    names, genders = _read_data("testdata.csv")
+    names, genders = read_name_gender_from_csv("testdata.csv")
     result = rfmodel.predict(names)
     correct = 0
     for index, name in enumerate(names):
@@ -121,7 +121,7 @@ def main():
     rfmodel = RFModel()
 
     if args.from_scratch or not os.path.isfile(fpath):
-        names, genders = _read_data("gender.csv")
+        names, genders = read_name_gender_from_csv("gender.csv")
         rfmodel.train(names, genders)
         rfmodel.save(fpath)
     else:
