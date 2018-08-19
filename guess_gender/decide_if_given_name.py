@@ -49,7 +49,7 @@ class GivenNameModel(object):
         weight = 0
         for char in name:
             weight += self.char_freq.get(char, -0.73)
-        return max(weight, 0)
+        return max(weight/len(name), 0)
 
     def predict_proba(self, names):
         weights = [self.__get_name_weight(name) for name in names]
